@@ -1,0 +1,17 @@
+services:
+  api:
+    build: .
+    ports:
+      - "8000:8000"
+    environment:
+      - DATABASE_URL=sqlite:///./hr.db
+      - JWT_SECRET=dev-secret
+      - RATE_LIMIT_REQUESTS=30
+      - RATE_LIMIT_WINDOW=60
+      - LOG_LEVEL=INFO
+      - APP_ENV=production
+    volumes:
+      - db_data:/app
+
+volumes:
+  db_data:
