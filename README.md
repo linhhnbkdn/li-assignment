@@ -22,14 +22,53 @@ python seed.py        # seeds demo data + prints JWT tokens
 uvicorn app.main:app --reload
 ```
 
+## Demo Organizations
+
+`seed.py` creates 2 demo orgs with **different column configs** to demonstrate multi-tenancy:
+
+| Org | Columns visible | Secret |
+|---|---|---|
+| **Acme Corp** | name, email, department, location, position | `acme-secret-key` |
+| **Globex** | name, department, location *(no email, no position)* | `globex-secret-key` |
+
+Generate tokens manually:
+```python
+import jwt
+# Acme Corp
+token = jwt.encode(
+    {"sub": "user-org-acme", "org_id": "org-acme", "exp": 9999999999},
+    "acme-secret-key", algorithm="HS256",
+)
+# Globex
+token = jwt.encode(
+    {"sub": "user-org-globex", "org_id": "org-globex", "exp": 9999999999},
+    "globex-secret-key", algorithm="HS256",
+)
+```
+
+Or just run `python seed.py` — tokens are printed at the end.
+
 ## Authentication
 
-All endpoints require a Bearer JWT token. Run `seed.py` to get demo tokens.
+All endpoints require a Bearer JWT token in the `Authorization` header.
 
 ```bash
+# Get token from seed output, then:
 curl -H "Authorization: Bearer <token>" \
   "http://localhost:8000/api/v1/employees/search?department=Engineering&limit=5"
 ```
+
+In Swagger UI (`/docs`): click **Authorize** → paste token into the **Value** field.
+
+## Environment Variables
+
+| Variable | Default | Description |
+|---|---|---|
+| `DATABASE_URL` | `sqlite:///./hr.db` | SQLAlchemy DB URL |
+| `RATE_LIMIT_REQUESTS` | `30` | Max requests per window per user |
+| `RATE_LIMIT_WINDOW` | `60` | Window size in seconds |
+| `LOG_LEVEL` | `INFO` | Logging level |
+| `APP_ENV` | `development` | Set to `production` to disable SQL echo |
 
 ## Search API
 
@@ -162,6 +201,19 @@ No external library. Pure Python using `collections.deque` per user + `threading
 **Database — SQLite + WAL mode**
 
 WAL (Write-Ahead Logging) is enabled on every connection via a SQLAlchemy event listener. This allows concurrent reads while a write is in progress — critical for search-heavy workloads.
+
+**Dependencies — note on external libraries**
+
+The assignment requires "only standard library" for business logic. The following external packages are used strictly as framework/ecosystem plumbing — not for implementing any of the core features:
+
+| Package | Role | Core logic uses stdlib? |
+|---|---|---|
+| `fastapi` + `pydantic` + `uvicorn` | Required by the assignment spec | — |
+| `sqlalchemy` + `alembic` | ORM + migrations (raw SQL also available) | ✅ search queries hand-written |
+| `pyjwt` | JWT decode/verify (standard HS256) | ✅ auth flow hand-written |
+| `pydantic-settings` | Env var loading | ✅ |
+
+Rate limiting, column masking, search orchestration, and pagination are **100% stdlib** (`collections.deque`, `threading.Lock`, `json`, no external library).
 
 ### Data Model
 
