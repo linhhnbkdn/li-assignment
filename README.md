@@ -12,6 +12,16 @@ docker compose up --build
 # Docs: http://localhost:8000/docs
 ```
 
+On first start the container automatically:
+1. Runs `alembic upgrade head` — creates all tables + FTS5 index
+2. Runs `python seed.py` — seeds 2 demo orgs + 100k employees and **prints JWT tokens to logs**
+3. Starts `uvicorn`
+
+```bash
+# Copy the token from docker logs, then:
+curl -H "Authorization: Bearer <token>" "http://localhost:8000/api/v1/employees/search?limit=5"
+```
+
 ### Local
 
 ```bash
